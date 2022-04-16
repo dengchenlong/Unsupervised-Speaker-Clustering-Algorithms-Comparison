@@ -10,14 +10,14 @@
 . ./path.sh
 set -euo pipefail
 
-stage=5
+stage=6
 diarizer_stage=0
 nj=10
-decode_nj=2
+decode_nj=12
 
-test_sets="dev test"
-AMI_DIR=/data/dcl/ami_mix_headset
 train_cmd="run.pl"
+test_sets="dev test"
+AMI_DIR=/data/dcl/ami-mix-headset
 
 diarizer_type=spectral  # ahc/spectral/vbx
 
@@ -30,7 +30,7 @@ fi
 
 # 准备数据文件存放目录。
 if [ $stage -le 2 ]; then
-  # 下载数据集分割和参考
+  # 下载数据集分割和参考。
   if ! [ -d AMI-diarization-setup ]; then
     git clone https://github.com/BUTSpeechFIT/AMI-diarization-setup
   fi
@@ -52,12 +52,11 @@ if [ $stage -le 2 ]; then
   done
 fi
 
-# 提取MFCC音频特征
+# 提取MFCC音频特征。
 if [ $stage -le 3 ]; then
   for dataset in train $test_sets; do
-    steps/make_mfcc.sh --mfcc-config conf/mfcc.conf --nj $nj --cmd "$train_cmd" data/"$dataset" exp/make_mfcc exp/make_mfcc
-    steps/compute_cmvn_stats.sh data/"$dataset" exp/compute_cmvn exp/compute_cmvn
-    steps/compute_vad_decision.sh --nj 10 --cmd "$train_cmd" data/"$dataset" exp/compute_vad exp/compute_vad
+    steps/make_mfcc.sh --mfcc-config conf/mfcc.conf --nj 15 --cmd "$train_cmd" data/"$dataset" exp/"$dataset"_mfcc exp/"$dataset"_mfcc
+    steps/compute_vad_decision.sh --nj 10 --cmd "$train_cmd" data/"$dataset" exp/"$dataset"_vad exp/"$dataset"_vad
     utils/fix_data_dir.sh data/"$dataset"
   done
 fi
@@ -72,38 +71,37 @@ if [ $stage -le 4 ]; then
     exp/train_diag_ubm_2048 exp/train_full_ubm_2048
   # 训练i-vector模型
   sid/train_ivector_extractor.sh --nj 2 --cmd "$train_cmd" \
-    exp/train_full_ubm_2048/final.ubm data/train exp/train_ivector_extractor_2048
+    exp/train_full_ubm_2048/final.ubm data/train exp/ivector_extractor
   utils/fix_data_dir.sh data/train
 fi
 
 if [ $stage -le 5 ]; then
   echo "$0: extracting i-vector"
   # 提取i-vector
-  sid/extract_ivectors.sh --cmd "$train_cmd" --nj 10 \
-    exp/train_ivector_extractor_2048 data/train exp/extract_ivectors_2048
+  sid/extract_ivectors.sh --cmd "$train_cmd" --nj 9 \
+    exp/ivector_extractor data/train exp/train_ivector
 fi
 
-# 训练PLDA模型
+# 训练PLDA模型。
 if [ $stage -le 6 ]; then
   echo "$0: training PLDA model"
-  # 计算平均矢量使待评估矢量居中
-  $train_cmd exp/train_plda/ivector/log/compute_mean.log \
-    ivector-mean scp:exp/extract_ivectors_2048/ivector.scp \
-    exp/train_plda/ivector/mean.vec || exit 1;
+  # 计算平均矢量使待评估矢量居中。
+  $train_cmd exp/train_plda_ivector/log/compute_mean.log \
+    ivector-mean scp:exp/train_ivector/ivector.scp \
+    exp/train_plda_ivector/mean.vec || exit 1;
 
-  cp data/train/spk2utt exp/extract_ivectors_2048/spk2utt
 
   # 训练PLDA模型
-  $train_cmd exp/train_plda/ivector/log/plda.log \
-    ivector-compute-plda ark:exp/extract_ivectors_2048/spk2utt \
-    "ark:ivector-subtract-global-mean scp:exp/extract_ivectors_2048/ivector.scp ark:- |\
-     transform-vec exp/train_plda/ivector/transform.mat ark:- ark:- |\
+  $train_cmd exp/train_plda_ivector/log/plda.log \
+    ivector-compute-plda ark:data/train/spk2utt \
+    "ark:ivector-subtract-global-mean scp:exp/train_ivector/ivector.scp ark:- |\
+     transform-vec exp/train_ivector/transform.mat ark:- ark:- |\
       ivector-normalize-length ark:-  ark:- |" \
-    exp/train_plda/ivector/plda || exit 1;
+    exp/train_plda_ivector/plda || exit 1;
   
-  cp exp/train_plda/ivector/mean.vec exp/extract_ivectors_2048/
-  cp exp/train_plda/ivector/transform.mat exp/extract_ivectors_2048/
-  cp exp/train_plda/ivector/plda exp/extract_ivectors_2048/
+  cp exp/train_plda_ivector/mean.vec exp/ivector_extractor/
+  cp exp/train_ivector/transform.mat exp/ivector_extractor/
+  cp exp/train_plda_ivector/plda exp/ivector_extractor/
 fi
 
 if [ $stage -le 7 ]; then
@@ -113,13 +111,13 @@ if [ $stage -le 7 ]; then
     diarize_nj=$(wc -l < "data/$datadir/wav.scp")
     nj=$((decode_nj>diarize_nj ? diarize_nj : decode_nj))
     local/diarize_${diarizer_type}.sh --nj $nj --cmd "$train_cmd" --stage $diarizer_stage \
-      exp/extract_ivectors_2048 data/"${datadir}" exp/diarize/${diarizer_type}/"${datadir}"
+      exp/ivector_extractor data/"${datadir}" exp/"${datadir}"_"${diarizer_type}"_ivector
 
     # 使用md-eval.pl评估RTTM
     rttm_affix=
     if [ $diarizer_type == "vbx" ]; then
       rttm_affix=".vb"
     fi
-    md-eval.pl -r "$ref_rttm" -s exp/diarize/${diarizer_type}/"${datadir}"/rttm${rttm_affix}
+    md-eval.pl -r "$ref_rttm" -s exp/"${datadir}"_"${diarizer_type}"_xvector/rttm${rttm_affix} > result_ivector_cos_"$diarizer_type"_"$datadir"
   done
 fi

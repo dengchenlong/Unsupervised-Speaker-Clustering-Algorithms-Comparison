@@ -1,5 +1,10 @@
 scripts/data/
 scripts/exp/
+scripts/AMI-diarization-setup/
+scripts/diarization
+scripts/sid
+scripts/steps
+scripts/utils
 ami-mix-headset
 .vscode/
 kaldi

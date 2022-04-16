@@ -15,17 +15,17 @@
 . ./path.sh
 set -euo pipefail
 
-stage=0
+stage=7
 diarizer_stage=0
 nj=10
-decode_nj=2
+decode_nj=12
 
 model_dir=exp/xvector_nnet_1a
 train_cmd="run.pl"
 test_sets="dev test"
-AMI_DIR=/data/dcl/ami_mix_headset
+AMI_DIR=/data/dcl/ami-mix-headset
 
-diarizer_type=spectral  # ahc/spectral/vbx
+diarizer_type=ahc  # ahc/spectral/vbx
 
 . utils/parse_options.sh
 
@@ -61,8 +61,7 @@ fi
 # 提取MFCC音频特征。
 if [ $stage -le 3 ]; then
   for dataset in train $test_sets; do
-    steps/make_mfcc.sh --mfcc-config conf/mfcc.conf --nj $nj --cmd "$train_cmd" data/"$dataset" exp/make_mfcc exp/make_mfcc
-    steps/compute_cmvn_stats.sh data/"$dataset" exp/compute_cmvn exp/compute_cmvn
+    steps/make_mfcc.sh --mfcc-config conf/mfcc.conf --nj 15 --cmd "$train_cmd" data/"$dataset" exp/"$dataset"_mfcc exp/"$dataset"_mfcc
     utils/fix_data_dir.sh data/"$dataset"
   done
 fi
@@ -70,38 +69,37 @@ fi
 if [ $stage -le 4 ]; then
   echo "$0: preparing a AMI training data to train PLDA model"
   # 使用滑动窗口进行CMVN并将特征写入硬盘。
-  local/nnet3/xvector/prepare_feats.sh --nj $nj --cmd "$train_cmd" \
-    data/train data/plda_train/xvector exp/prepare_plda_data/xvector
-  utils/fix_data_dir.sh data/plda_train
+  local/nnet3/xvector/prepare_feats.sh --nj 20 --cmd "$train_cmd" \
+    data/train data/train_cmn exp/train_cmn
+  utils/fix_data_dir.sh data/train_cmn
 fi
 
 if [ $stage -le 5 ]; then
   echo "$0: extracting x-vector for PLDA training data"
-  diarization/nnet3/xvector/extract_xvectors.sh --cmd "$train_cmd" \
-    --nj $nj --window 3.0 --period 10.0 --min-segment 1.5 --apply-cmn false \
-    --hard-min true $model_dir \
-    data/plda_train/xvector exp/extract_xvectors
+  diarization/nnet3/xvector/extract_xvectors.sh --cmd "$train_cmd" --nj 12 \
+    --window 3.0 --period 10.0 --min-segment 1.5 --apply-cmn false --hard-min true \
+    $model_dir data/train_cmn exp/train_xvector
 fi
 
 # 训练PLDA模型。
 if [ $stage -le 6 ]; then
   echo "$0: training PLDA model"
   # 计算平均矢量使待评估矢量居中。
-  $train_cmd exp/train_plda/xvector/log/compute_mean.log \
-    ivector-mean scp:exp/extract_xvectors/xvector.scp \
-    exp/train_plda/xvector/mean.vec || exit 1;
+  $train_cmd exp/train_plda_xvector/log/compute_mean.log \
+    ivector-mean scp:exp/train_xvector/xvector.scp \
+    exp/train_plda_xvector/mean.vec || exit 1;
 
   # 训练PLDA模型
-  $train_cmd exp/train_plda/xvector/log/plda.log \
-    ivector-compute-plda ark:exp/extract_xvectors/spk2utt \
-    "ark:ivector-subtract-global-mean scp:exp/extract_xvectors/xvector.scp ark:- |\
-     transform-vec exp/train_plda/xvector/transform.mat ark:- ark:- |\
+  $train_cmd exp/train_plda_xvector/log/plda.log \
+    ivector-compute-plda ark:exp/train_xvector/spk2utt \
+    "ark:ivector-subtract-global-mean scp:exp/train_xvector/xvector.scp ark:- |\
+     transform-vec exp/train_xvector/transform.mat ark:- ark:- |\
       ivector-normalize-length ark:-  ark:- |" \
-    exp/train_plda/xvector/plda || exit 1;
+    exp/train_plda_xvector/plda || exit 1;
   
-  cp exp/train_plda/xvector/mean.vec $model_dir/
-  cp exp/train_plda/xvector/transform.mat $model_dir/
-  cp exp/train_plda/xvector/plda $model_dir/
+  cp exp/train_plda_xvector/mean.vec $model_dir/
+  cp exp/train_xvector/transform.mat $model_dir/
+  cp exp/train_plda_xvector/plda $model_dir/
 fi
 
 if [ $stage -le 7 ]; then
@@ -111,13 +109,13 @@ if [ $stage -le 7 ]; then
     diarize_nj=$(wc -l < "data/$datadir/wav.scp")
     nj=$((decode_nj>diarize_nj ? diarize_nj : decode_nj))
     local/diarize_${diarizer_type}.sh --nj $nj --cmd "$train_cmd" --stage $diarizer_stage \
-      $model_dir data/"${datadir}" exp/diarize/${diarizer_type}/"${datadir}"
+      $model_dir data/"${datadir}" exp/"${datadir}"_"${diarizer_type}"_xvector
 
     # 使用md-eval.pl评估RTTM
     rttm_affix=
     if [ $diarizer_type == "vbx" ]; then
       rttm_affix=".vb"
     fi
-    md-eval.pl -r "$ref_rttm" -s exp/diarize/${diarizer_type}/"${datadir}"/rttm${rttm_affix}
+    md-eval.pl -r "$ref_rttm" -s exp/"${datadir}"_"${diarizer_type}"_xvector/rttm${rttm_affix} > result_xvector_cos_"$diarizer_type"_"$datadir"
   done
 fi
