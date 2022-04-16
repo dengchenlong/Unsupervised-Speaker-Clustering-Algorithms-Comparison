@@ -15,7 +15,7 @@
 . ./path.sh
 set -euo pipefail
 
-stage=7
+stage=0
 diarizer_stage=0
 nj=10
 decode_nj=12
@@ -25,7 +25,7 @@ train_cmd="run.pl"
 test_sets="dev test"
 AMI_DIR=/data/dcl/ami-mix-headset
 
-diarizer_type=ahc  # ahc/spectral/vbx
+diarizer_type=vbx  # ahc/spectral/vbx
 
 . utils/parse_options.sh
 
@@ -116,6 +116,6 @@ if [ $stage -le 7 ]; then
     if [ $diarizer_type == "vbx" ]; then
       rttm_affix=".vb"
     fi
-    md-eval.pl -r "$ref_rttm" -s exp/"${datadir}"_"${diarizer_type}"_xvector/rttm${rttm_affix} > result_xvector_cos_"$diarizer_type"_"$datadir"
+    md-eval.pl -r "$ref_rttm" -s exp/"${datadir}"_"${diarizer_type}"_xvector/rttm${rttm_affix} > result_xvector_plda_"$diarizer_type"_"$datadir"
   done
 fi
