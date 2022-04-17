@@ -78,7 +78,7 @@ fi
 if [ $stage -le 5 ]; then
   echo "$0: extracting i-vector"
   # 提取i-vector
-  sid/extract_ivectors.sh --cmd "$train_cmd" --nj 9 \
+  diarization/extract_ivectors.sh --cmd "$train_cmd" --nj 9 \
     exp/ivector_extractor data/train exp/train_ivector
 fi
 
@@ -93,7 +93,7 @@ if [ $stage -le 6 ]; then
 
   # 训练PLDA模型
   $train_cmd exp/train_plda_ivector/log/plda.log \
-    ivector-compute-plda ark:data/train/spk2utt \
+    ivector-compute-plda ark:exp/train_ivector/spk2utt \
     "ark:ivector-subtract-global-mean scp:exp/train_ivector/ivector.scp ark:- |\
      transform-vec exp/train_ivector/transform.mat ark:- ark:- |\
       ivector-normalize-length ark:-  ark:- |" \
@@ -118,6 +118,6 @@ if [ $stage -le 7 ]; then
     if [ $diarizer_type == "vbx" ]; then
       rttm_affix=".vb"
     fi
-    md-eval.pl -r "$ref_rttm" -s exp/"${datadir}"_"${diarizer_type}"_xvector/rttm${rttm_affix} > result_ivector_cos_"$diarizer_type"_"$datadir"
+    md-eval.pl -r "$ref_rttm" -s exp/"${datadir}"_"${diarizer_type}"_ivector/rttm${rttm_affix} > result_ivector_cos_"$diarizer_type"_"$datadir"
   done
 fi

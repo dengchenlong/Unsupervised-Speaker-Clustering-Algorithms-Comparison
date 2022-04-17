@@ -25,7 +25,7 @@ train_cmd="run.pl"
 test_sets="dev test"
 AMI_DIR=/data/dcl/ami-mix-headset
 
-diarizer_type=vbx  # ahc/spectral/vbx
+diarizer_type=spectral  # ahc/spectral/vbx
 
 . utils/parse_options.sh
 
