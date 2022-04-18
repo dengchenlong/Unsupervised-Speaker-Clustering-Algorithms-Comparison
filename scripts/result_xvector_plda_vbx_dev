@@ -1,4 +1,4 @@
-command line (run on 2022 Apr 16 at 21:13:11) Version: 22  /home/ubuntu/kaldi/tools/sctk/bin/md-eval.pl -r data/dev/rttm.annotation -s exp/dev_vbx_xvector/rttm.vb
+command line (run on 2022 Apr 19 at 03:24:44) Version: 22  /home/ubuntu/kaldi/tools/sctk/bin/md-eval.pl -r data/dev/rttm.annotation -s exp/dev_vbx_xvector/rttm.vb
 
 Time-based metadata alignment
 

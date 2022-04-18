@@ -15,18 +15,18 @@
 . ./path.sh
 set -euo pipefail
 
-stage=0
-diarizer_stage=0
+stage=7
+diarizer_stage=3  # 1: 提取嵌入码; 2: 计算相似度; 3: 聚类
 nj=10
 decode_nj=12
 
-model_dir=exp/xvector_nnet_1a
+model_dir=exp/xvector_nnet_1a  # Where xvector extractor or ivector extractor locates
 train_cmd="run.pl"
 test_sets="dev test"
 AMI_DIR=/data/dcl/ami-mix-headset
 
-diarizer_type=spectral  # ahc/spectral/vbx
-score_type=plda  # plda/cosine
+score_type=plda  # plda/cossim
+diarizer_type=vbx  # ahc/spectral/vbx
 
 . utils/parse_options.sh
 
@@ -109,7 +109,10 @@ if [ $stage -le 7 ]; then
 
     diarize_nj=$(wc -l < "data/$datadir/wav.scp")
     nj=$((decode_nj>diarize_nj ? diarize_nj : decode_nj))
-    local/diarize_xvector_${score_type}_${diarizer_type}.sh --nj $nj --cmd "$train_cmd" --stage $diarizer_stage \
+    # local/diarize_xvector_${score_type}_${diarizer_type}.sh --nj $nj --cmd "$train_cmd" --stage $diarizer_stage \
+    #   $model_dir data/"${datadir}" exp/"${datadir}"_"${diarizer_type}"_xvector
+    local/diarize.sh --nj $nj --cmd "$train_cmd" --stage $diarizer_stage \
+      --embedding_type xvector --score_type $score_type --cluster_type $diarizer_type \
       $model_dir data/"${datadir}" exp/"${datadir}"_"${diarizer_type}"_xvector
 
     # 使用md-eval.pl评估RTTM
@@ -117,6 +120,6 @@ if [ $stage -le 7 ]; then
     if [ $diarizer_type == "vbx" ]; then
       rttm_affix=".vb"
     fi
-    md-eval.pl -r "$ref_rttm" -s exp/"${datadir}"_"${diarizer_type}"_xvector/rttm${rttm_affix} > result_xvector_plda_"$diarizer_type"_"$datadir"
+    md-eval.pl -r "$ref_rttm" -s exp/"${datadir}"_"${diarizer_type}"_xvector/rttm${rttm_affix} > result_xvector_"$score_type"_"$diarizer_type"_"$datadir"
   done
 fi

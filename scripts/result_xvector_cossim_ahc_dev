@@ -1,4 +1,4 @@
-command line (run on 2022 Apr 19 at 03:25:29) Version: 22  /home/ubuntu/kaldi/tools/sctk/bin/md-eval.pl -r data/test/rttm.annotation -s exp/test_vbx_xvector/rttm.vb
+command line (run on 2022 Apr 19 at 02:34:46) Version: 22  /home/ubuntu/kaldi/tools/sctk/bin/md-eval.pl -r data/dev/rttm.annotation -s exp/dev_ahc_xvector/rttm
 
 Time-based metadata alignment
 
@@ -29,32 +29,32 @@ Exclusion zones for evaluation and scoring are:
 
 *** Performance analysis for Speaker Diarization for ALL ***
 
-    EVAL TIME =  31689.76 secs
-  EVAL SPEECH =  26244.89 secs ( 82.8 percent of evaluated time)
-  SCORED TIME =  31689.76 secs (100.0 percent of evaluated time)
-SCORED SPEECH =  26244.89 secs ( 82.8 percent of scored time)
+    EVAL TIME =  33353.77 secs
+  EVAL SPEECH =  27312.63 secs ( 81.9 percent of evaluated time)
+  SCORED TIME =  33353.77 secs (100.0 percent of evaluated time)
+SCORED SPEECH =  27312.63 secs ( 81.9 percent of scored time)
    EVAL WORDS =      0        
  SCORED WORDS =      0         (100.0 percent of evaluated words)
 ---------------------------------------------
-MISSED SPEECH =      0.54 secs (  0.0 percent of scored time)
+MISSED SPEECH =      0.74 secs (  0.0 percent of scored time)
 FALARM SPEECH =      0.00 secs (  0.0 percent of scored time)
  MISSED WORDS =      0         (100.0 percent of scored words)
 ---------------------------------------------
-SCORED SPEAKER TIME =  30713.92 secs (117.0 percent of scored speech)
-MISSED SPEAKER TIME =   4469.57 secs ( 14.6 percent of scored speaker time)
+SCORED SPEAKER TIME =  31558.66 secs (115.5 percent of scored speech)
+MISSED SPEAKER TIME =   4246.77 secs ( 13.5 percent of scored speaker time)
 FALARM SPEAKER TIME =      0.00 secs (  0.0 percent of scored speaker time)
- SPEAKER ERROR TIME =   3088.34 secs ( 10.1 percent of scored speaker time)
+ SPEAKER ERROR TIME =   4797.18 secs ( 15.2 percent of scored speaker time)
 SPEAKER ERROR WORDS =      0         (100.0 percent of scored speaker words)
 ---------------------------------------------
- OVERALL SPEAKER DIARIZATION ERROR = 24.61 percent of scored speaker time  `(ALL)
+ OVERALL SPEAKER DIARIZATION ERROR = 28.66 percent of scored speaker time  `(ALL)
 ---------------------------------------------
  Speaker type confusion matrix -- speaker weighted
   REF\SYS (count)      unknown               MISS              
-unknown                  51 /  81.0%         12 /  19.0%
-  FALSE ALARM             0 /   0.0%
+unknown                  72 / 100.0%          0 /   0.0%
+  FALSE ALARM           245 / 340.3%
 ---------------------------------------------
  Speaker type confusion matrix -- time weighted
   REF\SYS (seconds)    unknown               MISS              
-unknown            26244.35 /  85.4%    4469.57 /  14.6%
+unknown            27311.89 /  86.5%    4246.77 /  13.5%
   FALSE ALARM          0.00 /   0.0%
 ---------------------------------------------
