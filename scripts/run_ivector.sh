@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Copyright   2022   Nankai University (Author: Deng Chenlong)
+# Copyright   2022   Nankai University (Author: Chenlong Deng)
 # Apache 2.0.
 #
 # 此配方对AMI语料库中的mix-headset录音进行说话人分割聚类。
