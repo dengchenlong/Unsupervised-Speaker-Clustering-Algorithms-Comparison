@@ -10,17 +10,18 @@
 . ./path.sh
 set -euo pipefail
 
-stage=6
-diarizer_stage=0
+stage=7
+diarizer_stage=2  # 1: extract vectors; 2: score; 3: cluster
 nj=10
-decode_nj=12
+decode_nj=9
 
 train_cmd="run.pl"
 test_sets="dev test"
 AMI_DIR=/data/dcl/ami-mix-headset
 
+GMMs=2048  # 512~2048
+score_type=plda  # plda/cossim
 diarizer_type=spectral  # ahc/spectral/vbx
-score_type=plda  # plda/cosine
 
 . utils/parse_options.sh
 
@@ -66,13 +67,13 @@ if [ $stage -le 4 ]; then
   echo "$0: training ubm and i-vector extractor"
   # 训练对角ubm
   sid/train_diag_ubm.sh --nj $nj --cmd "$train_cmd" \
-    data/train 2048 exp/train_diag_ubm_2048
+    data/train ${GMMs} exp/train_diag_ubm
   # 训练全ubm
   sid/train_full_ubm.sh --nj $nj --cmd "$train_cmd" data/train \
-    exp/train_diag_ubm_2048 exp/train_full_ubm_2048
+    exp/train_diag_ubm exp/train_full_ubm
   # 训练i-vector模型
   sid/train_ivector_extractor.sh --nj 2 --cmd "$train_cmd" \
-    exp/train_full_ubm_2048/final.ubm data/train exp/ivector_extractor
+    exp/train_full_ubm/final.ubm data/train exp/ivector_extractor
   utils/fix_data_dir.sh data/train
 fi
 
@@ -90,7 +91,6 @@ if [ $stage -le 6 ]; then
   $train_cmd exp/train_plda_ivector/log/compute_mean.log \
     ivector-mean scp:exp/train_ivector/ivector.scp \
     exp/train_plda_ivector/mean.vec || exit 1;
-
 
   # 训练PLDA模型
   $train_cmd exp/train_plda_ivector/log/plda.log \
@@ -111,7 +111,8 @@ if [ $stage -le 7 ]; then
 
     diarize_nj=$(wc -l < "data/$datadir/wav.scp")
     nj=$((decode_nj>diarize_nj ? diarize_nj : decode_nj))
-    local/diarize_ivector_${score_type}_${diarizer_type}.sh --nj $nj --cmd "$train_cmd" --stage $diarizer_stage \
+    local/diarize.sh --nj $nj --cmd "$train_cmd" --stage $diarizer_stage \
+      --embedding_type ivector --score_type $score_type --cluster_type $diarizer_type \
       exp/ivector_extractor data/"${datadir}" exp/"${datadir}"_"${diarizer_type}"_ivector
 
     # 使用md-eval.pl评估RTTM
@@ -119,6 +120,6 @@ if [ $stage -le 7 ]; then
     if [ $diarizer_type == "vbx" ]; then
       rttm_affix=".vb"
     fi
-    md-eval.pl -r "$ref_rttm" -s exp/"${datadir}"_"${diarizer_type}"_ivector/rttm${rttm_affix} > result_ivector_cos_"$diarizer_type"_"$datadir"
+    md-eval.pl -r "$ref_rttm" -s exp/"${datadir}"_"${diarizer_type}"_ivector/rttm${rttm_affix} > result_ivector_"$score_type"_"$diarizer_type"_"$datadir"
   done
 fi
