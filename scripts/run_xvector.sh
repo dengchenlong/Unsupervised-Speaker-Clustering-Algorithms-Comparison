@@ -26,6 +26,7 @@ test_sets="dev test"
 AMI_DIR=/data/dcl/ami-mix-headset
 
 diarizer_type=spectral  # ahc/spectral/vbx
+score_type=plda  # plda/cosine
 
 . utils/parse_options.sh
 
@@ -108,7 +109,7 @@ if [ $stage -le 7 ]; then
 
     diarize_nj=$(wc -l < "data/$datadir/wav.scp")
     nj=$((decode_nj>diarize_nj ? diarize_nj : decode_nj))
-    local/diarize_${diarizer_type}.sh --nj $nj --cmd "$train_cmd" --stage $diarizer_stage \
+    local/diarize_xvector_${score_type}_${diarizer_type}.sh --nj $nj --cmd "$train_cmd" --stage $diarizer_stage \
       $model_dir data/"${datadir}" exp/"${datadir}"_"${diarizer_type}"_xvector
 
     # 使用md-eval.pl评估RTTM
