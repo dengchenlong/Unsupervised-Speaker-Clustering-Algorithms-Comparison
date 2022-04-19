@@ -1,4 +1,4 @@
-command line (run on 2022 Apr 19 at 03:07:33) Version: 22  /home/ubuntu/kaldi/tools/sctk/bin/md-eval.pl -r data/test/rttm.annotation -s exp/test_spectral_xvector/rttm
+command line (run on 2022 Apr 19 at 23:47:09) Version: 22  /home/ubuntu/kaldi/tools/sctk/bin/md-eval.pl -r data/test/rttm.annotation -s exp/test_spectral_xvector/rttm
 
 Time-based metadata alignment
 
@@ -43,15 +43,15 @@ FALARM SPEECH =      0.00 secs (  0.0 percent of scored time)
 SCORED SPEAKER TIME =  30713.92 secs (117.0 percent of scored speech)
 MISSED SPEAKER TIME =   4469.57 secs ( 14.6 percent of scored speaker time)
 FALARM SPEAKER TIME =      0.00 secs (  0.0 percent of scored speaker time)
- SPEAKER ERROR TIME =   7284.01 secs ( 23.7 percent of scored speaker time)
+ SPEAKER ERROR TIME =   9722.17 secs ( 31.7 percent of scored speaker time)
 SPEAKER ERROR WORDS =      0         (100.0 percent of scored speaker words)
 ---------------------------------------------
- OVERALL SPEAKER DIARIZATION ERROR = 38.27 percent of scored speaker time  `(ALL)
+ OVERALL SPEAKER DIARIZATION ERROR = 46.21 percent of scored speaker time  `(ALL)
 ---------------------------------------------
  Speaker type confusion matrix -- speaker weighted
   REF\SYS (count)      unknown               MISS              
-unknown                  47 /  74.6%         16 /  25.4%
-  FALSE ALARM            10 /  15.9%
+unknown                  49 /  77.8%         14 /  22.2%
+  FALSE ALARM            31 /  49.2%
 ---------------------------------------------
  Speaker type confusion matrix -- time weighted
   REF\SYS (seconds)    unknown               MISS              

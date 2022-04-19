@@ -8,3 +8,4 @@ scripts/utils
 ami-mix-headset
 .vscode/
 kaldi
+tf-kaldi-speaker

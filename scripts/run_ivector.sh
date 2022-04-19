@@ -10,18 +10,34 @@
 . ./path.sh
 set -euo pipefail
 
-stage=7
-diarizer_stage=2  # 1: extract vectors; 2: score; 3: cluster
+# 配置参数
+stage=0
+diarizer_stage=0  # 1: 提取嵌入码; 2: 计算相似度; 3: 聚类。
 nj=10
 decode_nj=9
 
 train_cmd="run.pl"
 test_sets="dev test"
 AMI_DIR=/data/dcl/ami-mix-headset
-
 GMMs=2048  # 512~2048
 score_type=plda  # plda/cossim
-diarizer_type=spectral  # ahc/spectral/vbx
+diarizer_type=vbx  # ahc/spectral/vbx，vbx只用于x-vector。
+threshold_ahc=0.1  # AHC聚类阈值，默认为0.1。
+min_neighbors=3  # 谱聚类参数，默认为3。
+threshold_vbx=0.1  # VBx参数，默认为0.1。
+loop_prob=0.5  # VBx参数，默认为0.5。
+fa=0.05  # VBx参数，默认为0.05。
+fb=1  # VBx参数，默认为1。
+target_energy=0.1  # PLDA参数，默认为0.1。
+window_diar=1.5  # 默认为1.5。
+period_diar=0.75  # 默认为0.75。
+min_segment_diar=0.5  # 默认为0.5。
+apply_cmn_when_extracting=false
+hard_min=true
+window=3.0  # 默认为3.0。
+period=10.0  # 默认为10.0。
+min_segment=1.5  # 默认为1.5。
+# 配置参数。
 
 . utils/parse_options.sh
 
@@ -57,7 +73,7 @@ fi
 # 提取MFCC音频特征。
 if [ $stage -le 3 ]; then
   for dataset in train $test_sets; do
-    steps/make_mfcc.sh --mfcc-config conf/mfcc.conf --nj 15 --cmd "$train_cmd" data/"$dataset" exp/"$dataset"_mfcc exp/"$dataset"_mfcc
+    steps/make_mfcc.sh --mfcc-config conf/mfcc_hires.conf --nj 15 --cmd "$train_cmd" data/"$dataset" exp/"$dataset"_mfcc exp/"$dataset"_mfcc
     steps/compute_vad_decision.sh --nj 10 --cmd "$train_cmd" data/"$dataset" exp/"$dataset"_vad exp/"$dataset"_vad
     utils/fix_data_dir.sh data/"$dataset"
   done
@@ -113,6 +129,9 @@ if [ $stage -le 7 ]; then
     nj=$((decode_nj>diarize_nj ? diarize_nj : decode_nj))
     local/diarize.sh --nj $nj --cmd "$train_cmd" --stage $diarizer_stage \
       --embedding_type ivector --score_type $score_type --cluster_type $diarizer_type \
+      --threshold_ahc $threshold_ahc --threshold_vbx $threshold_vbx --target_energy $target_energy --min_neighbors $min_neighbors \
+      --window $window_diar --period $period_diar --min_segment $min_segment_diar \
+      --loop_prob $loop_prob --fa $fa --fb $fb --apply_cmn $apply_cmn_when_extracting \
       exp/ivector_extractor data/"${datadir}" exp/"${datadir}"_"${diarizer_type}"_ivector
 
     # 使用md-eval.pl评估RTTM

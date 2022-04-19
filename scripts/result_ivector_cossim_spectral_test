@@ -1,4 +1,4 @@
-command line (run on 2022 Apr 19 at 00:06:26) Version: 22  /home/ubuntu/kaldi/tools/sctk/bin/md-eval.pl -r data/test/rttm.annotation -s exp/test_spectral_ivector/rttm
+command line (run on 2022 Apr 19 at 11:48:56) Version: 22  /home/ubuntu/kaldi/tools/sctk/bin/md-eval.pl -r data/test/rttm.annotation -s exp/test_spectral_ivector/rttm
 
 Time-based metadata alignment
 

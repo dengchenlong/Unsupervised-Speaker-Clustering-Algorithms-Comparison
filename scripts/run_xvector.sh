@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
-# Copyright   2022   Nankai University (Author: Chenlong Deng)
-# Apache 2.0.
-#
+
 # 此配方对AMI语料库中的mix-headset录音进行说话人分割聚类。
 # x-vector模型是在有仿真RIR文件的VoxCeleb v2语料库上训练的。
 # 这个配方使用了已知的SAD。
@@ -15,18 +13,33 @@
 . ./path.sh
 set -euo pipefail
 
-stage=7
-diarizer_stage=3  # 1: 提取嵌入码; 2: 计算相似度; 3: 聚类
+# 配置参数。
+stage=0
+diarizer_stage=0  # 1: 提取嵌入码; 2: 计算相似度; 3: 聚类。
 nj=10
 decode_nj=12
-
-model_dir=exp/xvector_nnet_1a  # Where xvector extractor or ivector extractor locates
+model_dir=exp/xvector_nnet_1a  # 嵌入码提取模型所在路径。
 train_cmd="run.pl"
 test_sets="dev test"
 AMI_DIR=/data/dcl/ami-mix-headset
-
 score_type=plda  # plda/cossim
-diarizer_type=vbx  # ahc/spectral/vbx
+diarizer_type=ahc  # ahc/spectral/vbx，vbx只用于x-vector。
+threshold_ahc=0.1  # AHC聚类阈值，默认为0.1。
+min_neighbors=3  # 谱聚类参数，默认为3。
+threshold_vbx=0.1  # VBx参数，默认为0.1。
+loop_prob=0.5  # VBx参数，默认为0.5。
+fa=0.05  # VBx参数，默认为0.05。
+fb=1  # VBx参数，默认为1。
+target_energy=0.1  # PLDA参数，默认为0.1。
+window_diar=1.5  # 默认为1.5。
+period_diar=0.75  # 默认为0.75。
+min_segment_diar=0.5  # 默认为0.5。
+apply_cmn_when_extracting=false
+hard_min=true
+window=3.0  # 默认为3.0。
+period=10.0  # 默认为10.0。
+min_segment=1.5  # 默认为1.5。
+# 配置参数。
 
 . utils/parse_options.sh
 
@@ -62,13 +75,13 @@ fi
 # 提取MFCC音频特征。
 if [ $stage -le 3 ]; then
   for dataset in train $test_sets; do
-    steps/make_mfcc.sh --mfcc-config conf/mfcc.conf --nj 15 --cmd "$train_cmd" data/"$dataset" exp/"$dataset"_mfcc exp/"$dataset"_mfcc
+    steps/make_mfcc.sh --mfcc-config conf/mfcc_hires.conf --nj 15 --cmd "$train_cmd" data/"$dataset" exp/"$dataset"_mfcc exp/"$dataset"_mfcc
     utils/fix_data_dir.sh data/"$dataset"
   done
 fi
 
 if [ $stage -le 4 ]; then
-  echo "$0: preparing a AMI training data to train PLDA model"
+  echo "$0: 准备AMI训练数据用于训练PLDA模型。"
   # 使用滑动窗口进行CMVN并将特征写入硬盘。
   local/nnet3/xvector/prepare_feats.sh --nj 20 --cmd "$train_cmd" \
     data/train data/train_cmn exp/train_cmn
@@ -76,9 +89,9 @@ if [ $stage -le 4 ]; then
 fi
 
 if [ $stage -le 5 ]; then
-  echo "$0: extracting x-vector for PLDA training data"
+  echo "$0: 提取PLDA训练数据的x-vector嵌入码。"
   diarization/nnet3/xvector/extract_xvectors.sh --cmd "$train_cmd" --nj 12 \
-    --window 3.0 --period 10.0 --min-segment 1.5 --apply-cmn false --hard-min true \
+    --window $window --period $period --min-segment $min_segment --apply-cmn $apply_cmn_when_extracting --hard-min $hard_min \
     $model_dir data/train_cmn exp/train_xvector
 fi
 
@@ -109,10 +122,11 @@ if [ $stage -le 7 ]; then
 
     diarize_nj=$(wc -l < "data/$datadir/wav.scp")
     nj=$((decode_nj>diarize_nj ? diarize_nj : decode_nj))
-    # local/diarize_xvector_${score_type}_${diarizer_type}.sh --nj $nj --cmd "$train_cmd" --stage $diarizer_stage \
-    #   $model_dir data/"${datadir}" exp/"${datadir}"_"${diarizer_type}"_xvector
     local/diarize.sh --nj $nj --cmd "$train_cmd" --stage $diarizer_stage \
       --embedding_type xvector --score_type $score_type --cluster_type $diarizer_type \
+      --threshold_ahc $threshold_ahc --threshold_vbx $threshold_vbx --target_energy $target_energy --min_neighbors $min_neighbors \
+      --window $window_diar --period $period_diar --min_segment $min_segment_diar \
+      --loop_prob $loop_prob --fa $fa --fb $fb --apply_cmn $apply_cmn_when_extracting \
       $model_dir data/"${datadir}" exp/"${datadir}"_"${diarizer_type}"_xvector
 
     # 使用md-eval.pl评估RTTM
