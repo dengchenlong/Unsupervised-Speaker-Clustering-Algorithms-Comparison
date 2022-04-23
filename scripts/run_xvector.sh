@@ -134,6 +134,6 @@ if [ $stage -le 7 ]; then
     if [ $diarizer_type == "vbx" ]; then
       rttm_affix=".vb"
     fi
-    md-eval.pl -r "$ref_rttm" -s exp/"${datadir}"_"${diarizer_type}"_xvector/rttm${rttm_affix} > result_xvector_"$score_type"_"$diarizer_type"_"$datadir"
+    md-eval.pl -r "$ref_rttm" -s exp/"${datadir}"_"${diarizer_type}"_xvector/rttm${rttm_affix} > ../results/result_xvector_"$score_type"_"$diarizer_type"_"$datadir"
   done
 fi

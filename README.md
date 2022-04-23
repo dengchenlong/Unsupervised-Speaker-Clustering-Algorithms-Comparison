@@ -3,6 +3,8 @@
     tensorflow
     tf-kaldi-speaker
 
+实验使用AMI mix-headset数据集。
+
 安装后在install.sh中按照说明修改相关路径参数。
 
 进入该README文件所在目录，执行命令：
