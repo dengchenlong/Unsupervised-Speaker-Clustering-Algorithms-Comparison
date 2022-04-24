@@ -1,5 +1,5 @@
-该配方基于AMI mix-headset数据集分别使用i-vectors、x-vectors和其他深度学习方法实现了说话人分
-割聚类。此外，我还演示了不同聚类方法的使用，包括AHC、Spectrum和VBx。
+该配方基于AMI mix-headset数据集分别使用i-vectors、x-vectors实现了说话人分割聚类。此外，我
+还演示了不同聚类方法的使用，包括AHC、Spectrum和BHMM。最后，还添加了BHMM重分割的选项。
 
 ## 关于数据集注释和分割
 
